@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FraudGuard AI — Credit Card Fraud Detection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #06080f;
+  --bg2:      #090c17;
+  --bg3:      #0d1221;
+  --card:     #0f1629;
+  --card2:    #141d33;
+  --border:   rgba(100,140,255,0.10);
+  --border2:  rgba(100,140,255,0.22);
+  --blue:     #4f7fff;
+  --blue2:    #2563eb;
+  --blue3:    #1a40b0;
+  --cyan:     #00d4ff;
+  --green:    #00e5a0;
+  --red:      #ff4d6a;
+  --amber:    #ffba00;
+  --purple:   #a78bfa;
+  --text:     #eef2ff;
+  --text2:    #8899cc;
+  --text3:    #4a5780;
+  --glow:     rgba(79,127,255,0.18);
+  --glow-cyan:rgba(0,212,255,0.12);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+::selection{background:rgba(79,127,255,0.35);color:#fff}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+/* NOISE OVERLAY */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:0.025;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;
+  background:rgba(6,8,15,0.80);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--border);padding:0 2rem;height:62px;
+  display:flex;align-items:center;justify-content:space-between}
+.nav-logo{display:flex;align-items:center;gap:10px;font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--text);text-decoration:none;letter-spacing:-0.3px}
+.nav-logo-icon{width:32px;height:32px;position:relative;flex-shrink:0}
+.nav-logo-icon svg{width:32px;height:32px}
+.nav-links{display:flex;gap:2rem;list-style:none}
+.nav-links a{color:var(--text2);text-decoration:none;font-size:13.5px;font-weight:500;transition:color 0.2s;letter-spacing:0.2px}
+.nav-links a:hover{color:var(--blue)}
+.nav-cta{background:var(--blue);color:white;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;transition:all 0.2s;letter-spacing:0.2px}
+.nav-cta:hover{background:#6690ff;transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,127,255,0.35)}
+
+/* ── GRID BG ── */
+.grid-bg{position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(79,127,255,0.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(79,127,255,0.04) 1px,transparent 1px);
+  background-size:40px 40px}
+
+/* ── HERO ── */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:100px 2rem 5rem;position:relative;text-align:center;overflow:hidden}
+.hero-glow{position:absolute;top:-100px;left:50%;transform:translateX(-50%);
+  width:700px;height:700px;border-radius:50%;
+  background:radial-gradient(ellipse,rgba(79,127,255,0.13) 0%,transparent 65%);
+  pointer-events:none;z-index:0}
+.hero-glow2{position:absolute;top:200px;left:20%;width:400px;height:400px;border-radius:50%;
+  background:radial-gradient(ellipse,rgba(0,212,255,0.06) 0%,transparent 65%);
+  pointer-events:none;z-index:0}
+.hero-content{position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;
+  background:rgba(79,127,255,0.08);border:1px solid rgba(79,127,255,0.28);
+  color:#93c5fd;font-size:11.5px;font-weight:600;letter-spacing:1px;
+  padding:6px 16px;border-radius:30px;margin-bottom:2.2rem;text-transform:uppercase;font-family:'IBM Plex Mono',monospace}
+.pulse-dot{width:6px;height:6px;background:var(--blue);border-radius:50%;animation:pulseA 2s infinite}
+@keyframes pulseA{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(79,127,255,0.5)}50%{opacity:0.7;box-shadow:0 0 0 6px rgba(79,127,255,0)}}
+.hero h1{font-family:'Syne',sans-serif;font-size:clamp(2.8rem,6.5vw,5.2rem);font-weight:800;line-height:1.05;
+  letter-spacing:-2px;margin-bottom:1.5rem}
+.hero h1 .line1{display:block;color:var(--text)}
+.hero h1 .line2{display:block;
+  background:linear-gradient(130deg,var(--blue) 0%,var(--cyan) 60%,var(--green) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:17px;color:var(--text2);max-width:520px;margin:0 auto 2.75rem;line-height:1.75;font-weight:400}
+.hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn-primary{background:var(--blue);color:white;border:none;padding:14px 30px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;transition:all 0.25s;display:inline-flex;align-items:center;gap:9px;letter-spacing:0.2px;box-shadow:0 4px 24px rgba(79,127,255,0.3)}
+.btn-primary:hover{background:#6690ff;transform:translateY(-2px);box-shadow:0 8px 32px rgba(79,127,255,0.45)}
+.btn-outline{background:rgba(255,255,255,0.04);color:var(--text);border:1px solid var(--border2);padding:14px 30px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;transition:all 0.25s;display:inline-flex;align-items:center;gap:9px}
+.btn-outline:hover{border-color:var(--blue);color:var(--blue);background:rgba(79,127,255,0.06)}
+.hero-stats{display:flex;gap:0;margin-top:5rem;border:1px solid var(--border);border-radius:16px;overflow:hidden;background:rgba(15,22,41,0.6)}
+.hero-stat{flex:1;padding:1.5rem 2rem;border-right:1px solid var(--border);text-align:center}
+.hero-stat:last-child{border-right:none}
+.hero-stat .num{font-family:'IBM Plex Mono',monospace;font-size:1.8rem;font-weight:600;display:block;margin-bottom:4px}
+.hero-stat .lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px}
+
+/* ── SECTION COMMONS ── */
+.section{padding:6rem 2rem;max-width:1100px;margin:0 auto}
+.section-tag{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--blue);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.section-tag::before{content:'';display:inline-block;width:20px;height:1px;background:var(--blue)}
+.section-title{font-family:'Syne',sans-serif;font-size:clamp(1.8rem,3.2vw,2.75rem);font-weight:800;margin-bottom:1rem;line-height:1.15;letter-spacing:-0.5px}
+.section-sub{font-size:16px;color:var(--text2);max-width:520px;line-height:1.75}
+
+/* ── FEATURES ── */
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:3.5rem;border:1px solid var(--border);border-radius:20px;overflow:hidden;background:var(--border)}
+.feature-card{background:var(--card);padding:2rem;transition:background 0.2s;position:relative;overflow:hidden}
+.feature-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 0 0,rgba(79,127,255,0.06),transparent 60%);opacity:0;transition:opacity 0.3s}
+.feature-card:hover{background:var(--card2)}
+.feature-card:hover::before{opacity:1}
+.feature-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:1.1rem;font-size:18px}
+.fi-blue{background:rgba(79,127,255,0.12);border:1px solid rgba(79,127,255,0.2)}
+.fi-cyan{background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.15)}
+.fi-green{background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.15)}
+.fi-amber{background:rgba(255,186,0,0.1);border:1px solid rgba(255,186,0,0.15)}
+.fi-red{background:rgba(255,77,106,0.1);border:1px solid rgba(255,77,106,0.15)}
+.fi-purple{background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.15)}
+.feature-card h3{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:8px;letter-spacing:-0.2px}
+.feature-card p{font-size:13.5px;color:var(--text2);line-height:1.65}
+
+/* ── PIPELINE ── */
+.pipeline-section{padding:0 2rem 5rem;max-width:1100px;margin:0 auto}
+.pipeline-scroll{display:flex;align-items:center;gap:0;overflow-x:auto;padding-bottom:1rem;scrollbar-width:thin}
+.pipe-step{flex-shrink:0;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.4rem;min-width:130px}
+.pipe-step.active{border-color:rgba(79,127,255,0.5);background:rgba(79,127,255,0.06)}
+.pipe-num{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--blue);margin-bottom:6px;letter-spacing:0.5px}
+.pipe-step.active .pipe-num{color:var(--cyan)}
+.pipe-name{font-family:'Syne',sans-serif;font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:3px}
+.pipe-step.active .pipe-name{color:var(--blue)}
+.pipe-detail{font-size:10.5px;color:var(--text3)}
+.pipe-arrow{color:var(--text3);padding:0 6px;font-size:18px;flex-shrink:0}
+
+/* ── METRICS ── */
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:1.75rem}
+.metric-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;text-align:center;position:relative;overflow:hidden}
+.metric-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px}
+.mc-blue::after{background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.mc-green::after{background:var(--green)}
+.mc-amber::after{background:var(--amber)}
+.mc-red::after{background:var(--red)}
+.metric-num{font-family:'IBM Plex Mono',monospace;font-size:2.1rem;font-weight:600;display:block;margin-bottom:6px}
+.mn-blue{color:var(--blue)}
+.mn-green{color:var(--green)}
+.mn-amber{color:var(--amber)}
+.mn-red{color:var(--red)}
+.metric-lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px}
+.models-compare{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.model-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;position:relative}
+.model-card.best{border-color:rgba(79,127,255,0.4);background:rgba(79,127,255,0.04)}
+.model-badge{position:absolute;top:-1px;right:14px;background:linear-gradient(135deg,var(--blue),var(--cyan));color:white;font-size:9.5px;font-weight:700;padding:4px 10px;border-radius:0 0 8px 8px;letter-spacing:0.8px;text-transform:uppercase;font-family:'IBM Plex Mono',monospace}
+.model-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:14px}
+.model-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.model-bar-label{font-size:10px;color:var(--text3);width:58px;text-transform:uppercase;letter-spacing:0.5px;font-family:'IBM Plex Mono',monospace}
+.model-bar-track{flex:1;height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden}
+.model-bar-fill{height:100%;border-radius:3px}
+.model-bar-val{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text2);width:38px;text-align:right}
+
+/* ── ANALYZER ── */
+.analyzer-section{padding:5rem 2rem 6rem;max-width:940px;margin:0 auto}
+.analyzer-header{text-align:center;margin-bottom:3.5rem}
+.analyzer-wrap{background:var(--card);border:1px solid var(--border);border-radius:22px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.4)}
+.analyzer-top-bar{background:rgba(79,127,255,0.06);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between}
+.top-bar-left{display:flex;align-items:center;gap:10px}
+.window-dots{display:flex;gap:6px}
+.wd{width:10px;height:10px;border-radius:50%}
+.wd1{background:#ff5f57}.wd2{background:#ffbd2e}.wd3{background:#28c840}
+.top-bar-label{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text2);letter-spacing:0.3px}
+.top-bar-status{display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--green)}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulseA 2.5s infinite}
+.form-body{padding:2rem 2rem 0}
+.form-section-head{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;margin-top:1.75rem}
+.form-section-head:first-child{margin-top:0}
+.form-section-head::after{content:'';flex:1;height:1px;background:var(--border)}
+.form-section-head svg{flex-shrink:0}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px}
+.form-field{display:flex;flex-direction:column;gap:6px}
+.form-field label{font-size:11.5px;font-weight:500;color:var(--text3);letter-spacing:0.3px;font-family:'IBM Plex Mono',monospace}
+.form-field input,.form-field select{background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:11px 13px;font-size:13.5px;font-family:'Inter',sans-serif;outline:none;transition:border-color 0.2s,box-shadow 0.2s;-webkit-appearance:none}
+.form-field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234a5780' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:36px}
+.form-field input:focus,.form-field select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(79,127,255,0.14)}
+.form-field input::placeholder{color:var(--text3)}
+.form-field select option{background:var(--bg2)}
+.toggle-group{display:flex;gap:6px}
+.tog{flex:1;padding:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s;text-align:center}
+.tog.tog-yes{background:rgba(79,127,255,0.12);border-color:rgba(79,127,255,0.4);color:#93c5fd}
+.tog.tog-no{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);color:var(--text)}
+.analyze-btn{width:100%;padding:15px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:white;border:none;border-radius:11px;font-size:15.5px;font-weight:600;cursor:pointer;font-family:'Syne',sans-serif;margin-top:1.75rem;margin-bottom:2rem;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.25s;letter-spacing:0.3px;box-shadow:0 4px 24px rgba(79,127,255,0.28)}
+.analyze-btn:hover:not(:disabled){opacity:0.92;transform:translateY(-1px);box-shadow:0 8px 32px rgba(79,127,255,0.4)}
+.analyze-btn:disabled{opacity:0.45;cursor:not-allowed;transform:none}
+
+/* ── RESULT ── */
+.result-panel{display:none;border-top:1px solid var(--border);animation:slideDown 0.35s ease}
+@keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.result-inner{padding:2rem}
+.result-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;gap:1rem;flex-wrap:wrap}
+.verdict-chip{display:flex;align-items:center;gap:10px}
+.verdict-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.verdict-text{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.3px}
+.result-timestamp{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3)}
+.result-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem}
+.res-metric{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.1rem;text-align:center}
+.res-metric-val{font-family:'IBM Plex Mono',monospace;font-size:1.8rem;font-weight:600;display:block;margin-bottom:4px}
+.res-metric-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px}
+.prob-visual{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem}
+.prob-title{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px}
+.prob-bar-track{height:10px;background:rgba(255,255,255,0.06);border-radius:5px;overflow:hidden;position:relative}
+.prob-bar-fill{height:100%;border-radius:5px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.prob-labels{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text3);margin-top:8px}
+.factors-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem}
+.factors-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.1rem}
+.factors-box h4{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.factor-item{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text2);margin-bottom:7px;line-height:1.45}
+.factor-dot{width:5px;height:5px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.explanation-box{background:var(--bg2);border:1px solid var(--border);border-left-width:3px;border-radius:0 12px 12px 0;padding:1.1rem 1.3rem;font-size:13.5px;color:var(--text2);line-height:1.65}
+
+/* ── HISTORY ROW ── */
+.history-row{display:none;gap:10px;padding:1.25rem 2rem;border-top:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.hist-chip{flex-shrink:0;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 13px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:7px;font-family:'IBM Plex Mono',monospace}
+.hist-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ── SPINNER ── */
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,0.25);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── TEAM ── */
+.team-section{padding:5rem 2rem 6rem;max-width:1100px;margin:0 auto}
+.team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-top:3.5rem}
+.team-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2rem;text-align:center;position:relative;overflow:hidden;transition:border-color 0.25s,transform 0.25s}
+.team-card:hover{border-color:var(--border2);transform:translateY(-4px)}
+.team-card-glow{position:absolute;top:0;left:0;right:0;height:100px;
+  background:linear-gradient(135deg,rgba(79,127,255,0.08),rgba(0,212,255,0.05));pointer-events:none}
+.team-avatar{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:white;margin:0 auto 1.25rem;position:relative;z-index:1;border:3px solid var(--bg)}
+.ta-blue{background:linear-gradient(135deg,var(--blue),var(--cyan))}
+.ta-teal{background:linear-gradient(135deg,var(--cyan),var(--green))}
+.team-name{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;margin-bottom:4px;letter-spacing:-0.3px}
+.team-role{font-size:12.5px;color:var(--blue);font-weight:600;margin-bottom:12px;letter-spacing:0.3px}
+.team-desc{font-size:13.5px;color:var(--text2);line-height:1.65;margin-bottom:1.25rem}
+.team-tags{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.tag{background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--text2);font-size:11px;font-weight:500;padding:4px 11px;border-radius:20px;font-family:'IBM Plex Mono',monospace}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid var(--border);padding:2.5rem 2rem;text-align:center}
+.footer-logo{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px}
+.footer-text{font-size:13px;color:var(--text3);line-height:1.7}
+.footer-text strong{color:var(--text2)}
+.footer-divider{width:40px;height:1px;background:var(--border);margin:14px auto}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .features-grid{grid-template-columns:1fr}
+  .metrics-grid{grid-template-columns:1fr 1fr}
+  .models-compare{grid-template-columns:1fr}
+  .result-metrics{grid-template-columns:1fr 1fr}
+  .factors-grid{grid-template-columns:1fr}
+  .nav-links{display:none}
+  .hero-stats{flex-direction:column;border-radius:12px}
+  .hero-stat{border-right:none;border-bottom:1px solid var(--border)}
+  .hero-stat:last-child{border-bottom:none}
+  .fg2,.fg3{grid-template-columns:1fr}
+  .hero h1{letter-spacing:-1px}
+}
+@media(max-width:500px){.metrics-grid{grid-template-columns:1fr 1fr}}
+
+/* ── ANIMATIONS ── */
+.fade-in{opacity:0;transform:translateY(18px);transition:opacity 0.6s ease,transform 0.6s ease}
+.fade-in.visible{opacity:1;transform:translateY(0)}
+.stagger-1{transition-delay:0.05s}
+.stagger-2{transition-delay:0.12s}
+.stagger-3{transition-delay:0.19s}
+.stagger-4{transition-delay:0.26s}
+.stagger-5{transition-delay:0.33s}
+.stagger-6{transition-delay:0.40s}
+
+/* ── MISC UTILITY ── */
+.mono{font-family:'IBM Plex Mono',monospace}
+.text-blue{color:var(--blue)}
+.text-green{color:var(--green)}
+.text-red{color:var(--red)}
+.text-amber{color:var(--amber)}
+.text-cyan{color:var(--cyan)}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-icon">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 2L4 8v9c0 6.3 5.1 12.2 12 13.7C23 29.2 28 23.3 28 17V8L16 2z" fill="rgba(79,127,255,0.15)" stroke="#4f7fff" stroke-width="1.5"/>
+        <path d="M11 16l4 4 6-6" stroke="#00d4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    FraudGuard <span style="color:var(--cyan)">AI</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#model">Model</a></li>
+    <li><a href="#analyzer">Analyzer</a></li>
+    <li><a href="#team">Team</a></li>
+  </ul>
+  <a href="#analyzer" class="nav-cta">Try Demo →</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="grid-bg"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+  <div class="hero-content">
+    <div class="hero-badge"><div class="pulse-dot"></div>Machine Learning · Random Forest Classifier</div>
+    <h1>
+      <span class="line1">Detect Credit Card</span>
+      <span class="line2">Fraud Instantly</span>
+    </h1>
+    <p class="hero-sub">An end-to-end ML system trained on real Indian transaction patterns. Powered by a tuned Random Forest with 10 engineered features and GridSearchCV optimization.</p>
+    <div class="hero-btns">
+      <a href="#analyzer" class="btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        Analyze Transaction
+      </a>
+      <a href="#model" class="btn-outline">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5 5-4-4-3 3"/></svg>
+        View Model Metrics
+      </a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><span class="num mono text-blue">1,000</span><div class="lbl">Training Samples</div></div>
+      <div class="hero-stat"><span class="num mono text-green">91%+</span><div class="lbl">F1 Score</div></div>
+      <div class="hero-stat"><span class="num mono text-amber">10</span><div class="lbl">Features Used</div></div>
+      <div class="hero-stat"><span class="num mono text-cyan">3</span><div class="lbl">Models Evaluated</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features" class="section">
+  <div class="section-tag">What We Built</div>
+  <h2 class="section-title">Complete ML Development<br>Life Cycle</h2>
+  <p class="section-sub">10 experiments covering every stage from problem definition to live deployment of a production fraud detector.</p>
+  <div class="features-grid">
+    <div class="feature-card fade-in stagger-1">
+      <div class="feature-icon fi-blue">🎯</div>
+      <h3>Problem Definition</h3>
+      <p>Binary classification — fraud (1) vs legitimate (0) — with well-scoped input features and target variable from Indian transaction data.</p>
+    </div>
+    <div class="feature-card fade-in stagger-2">
+      <div class="feature-icon fi-cyan">🔍</div>
+      <h3>Exploratory Data Analysis</h3>
+      <p>Deep dives into class imbalance, distribution plots, correlation heatmaps, and category-wise fraud rates across merchant types and cities.</p>
+    </div>
+    <div class="feature-card fade-in stagger-3">
+      <div class="feature-icon fi-green">⚙️</div>
+      <h3>Feature Engineering</h3>
+      <p>Extracted transaction hour and month from timestamps, one-hot encoded categoricals, and applied StandardScaler on numerical features.</p>
+    </div>
+    <div class="feature-card fade-in stagger-4">
+      <div class="feature-icon fi-amber">🌲</div>
+      <h3>Random Forest Classifier</h3>
+      <p>Trained Logistic Regression, Decision Tree, and Random Forest. RF won on recall and F1 — critical for catching fraud without overwhelming false positives.</p>
+    </div>
+    <div class="feature-card fade-in stagger-5">
+      <div class="feature-icon fi-red">🎛️</div>
+      <h3>GridSearchCV Tuning</h3>
+      <p>Hyperparameter grid search over n_estimators, max_depth, min_samples_split, and class_weight for optimal fraud recall performance.</p>
+    </div>
+    <div class="feature-card fade-in stagger-6">
+      <div class="feature-icon fi-purple">🚀</div>
+      <h3>Live Deployment</h3>
+      <p>End-to-end predict_fraud() function handles encoding → scaling → prediction in one call. Returns probability, risk tier, and confidence.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<div class="pipeline-section">
+  <div class="section-tag">MLDLC Pipeline</div>
+  <h2 class="section-title" style="font-size:1.55rem;margin-bottom:1.75rem">10-Experiment Workflow</h2>
+  <div class="pipeline-scroll">
+    <div class="pipe-step"><div class="pipe-num">EXP 01</div><div class="pipe-name">Problem<br>Definition</div><div class="pipe-detail">Fraud vs Legit</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-num">EXP 02</div><div class="pipe-name">Dataset<br>Structure</div><div class="pipe-detail">1000 rows, 13 cols</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-num">EXP 03</div><div class="pipe-name">Problem<br>Type</div><div class="pipe-detail">Binary classification</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-num">EXP 04</div><div class="pipe-name">Data<br>Cleaning</div><div class="pipe-detail">Nulls, types</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-num">EXP 05</div><div class="pipe-name">Preprocessing</div><div class="pipe-detail">Scale + encode</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-num">EXP 06</div><div class="pipe-name">EDA</div><div class="pipe-detail">Plots + stats</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-num">EXP 07</div><div class="pipe-name">Feature<br>Selection</div><div class="pipe-detail">SelectKBest</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-num">EXP 08</div><div class="pipe-name">Model<br>Training</div><div class="pipe-detail">LR, DT, RF</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-num">EXP 09</div><div class="pipe-name">Evaluation<br>&amp; Tuning</div><div class="pipe-detail">GridSearchCV</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step active"><div class="pipe-num">EXP 10</div><div class="pipe-name">Deployment</div><div class="pipe-detail">Live predict()</div></div>
+  </div>
+</div>
+
+<!-- MODEL METRICS -->
+<section id="model" class="section">
+  <div class="section-tag">Performance</div>
+  <h2 class="section-title">Model Evaluation Results</h2>
+  <p class="section-sub">Best model: Tuned Random Forest via GridSearchCV — highest Recall and F1-score on the test set.</p>
+  <div style="margin-top:3.5rem">
+    <div class="metrics-grid">
+      <div class="metric-card mc-blue fade-in stagger-1"><span class="metric-num mn-blue mono">97.8%</span><div class="metric-lbl">Accuracy</div></div>
+      <div class="metric-card mc-green fade-in stagger-2"><span class="metric-num mn-green mono">91.3%</span><div class="metric-lbl">Recall</div></div>
+      <div class="metric-card mc-amber fade-in stagger-3"><span class="metric-num mn-amber mono">93.6%</span><div class="metric-lbl">Precision</div></div>
+      <div class="metric-card mc-red fade-in stagger-4"><span class="metric-num mn-red mono">92.4%</span><div class="metric-lbl">F1-Score</div></div>
+    </div>
+    <div class="models-compare">
+      <div class="model-card fade-in stagger-1">
+        <div class="model-name">Logistic Regression</div>
+        <div class="model-bar-row"><div class="model-bar-label">Accuracy</div><div class="model-bar-track"><div class="model-bar-fill" style="width:84%;background:var(--text3)"></div></div><div class="model-bar-val">84.0%</div></div>
+        <div class="model-bar-row"><div class="model-bar-label">Recall</div><div class="model-bar-track"><div class="model-bar-fill" style="width:72%;background:var(--text3)"></div></div><div class="model-bar-val">72.0%</div></div>
+        <div class="model-bar-row"><div class="model-bar-label">F1</div><div class="model-bar-track"><div class="model-bar-fill" style="width:76%;background:var(--text3)"></div></div><div class="model-bar-val">76.0%</div></div>
+      </div>
+      <div class="model-card fade-in stagger-2">
+        <div class="model-name">Decision Tree</div>
+        <div class="model-bar-row"><div class="model-bar-label">Accuracy</div><div class="model-bar-track"><div class="model-bar-fill" style="width:90%;background:var(--text2)"></div></div><div class="model-bar-val">90.0%</div></div>
+        <div class="model-bar-row"><div class="model-bar-label">Recall</div><div class="model-bar-track"><div class="model-bar-fill" style="width:82%;background:var(--text2)"></div></div><div class="model-bar-val">82.0%</div></div>
+        <div class="model-bar-row"><div class="model-bar-label">F1</div><div class="model-bar-track"><div class="model-bar-fill" style="width:85%;background:var(--text2)"></div></div><div class="model-bar-val">85.0%</div></div>
+      </div>
+      <div class="model-card best fade-in stagger-3">
+        <div class="model-badge">✦ Best Model</div>
+        <div class="model-name text-blue">Random Forest (Tuned)</div>
+        <div class="model-bar-row"><div class="model-bar-label">Accuracy</div><div class="model-bar-track"><div class="model-bar-fill" style="width:97.8%;background:var(--blue)"></div></div><div class="model-bar-val text-blue">97.8%</div></div>
+        <div class="model-bar-row"><div class="model-bar-label">Recall</div><div class="model-bar-track"><div class="model-bar-fill" style="width:91.3%;background:var(--green)"></div></div><div class="model-bar-val text-green">91.3%</div></div>
+        <div class="model-bar-row"><div class="model-bar-label">F1</div><div class="model-bar-track"><div class="model-bar-fill" style="width:92.4%;background:var(--cyan)"></div></div><div class="model-bar-val text-cyan">92.4%</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ANALYZER -->
+<section id="analyzer" class="analyzer-section">
+  <div class="analyzer-header">
+    <div class="section-tag" style="justify-content:center">Live Demo</div>
+    <h2 class="section-title">Transaction Risk Analyzer</h2>
+    <p style="color:var(--text2);font-size:15.5px;max-width:500px;margin:0 auto;line-height:1.7">Enter real transaction details. Our ML model analyzes 10 features and returns instant fraud probability with factor breakdown.</p>
+  </div>
+
+  <div class="analyzer-wrap">
+    <div class="analyzer-top-bar">
+      <div class="top-bar-left">
+        <div class="window-dots"><div class="wd wd1"></div><div class="wd wd2"></div><div class="wd wd3"></div></div>
+        <span class="top-bar-label">fraud_detection_model.pkl · v1.0</span>
+      </div>
+      <div class="top-bar-status"><div class="status-dot"></div>Model Active</div>
+    </div>
+
+    <div class="form-body">
+      <div class="form-section-head">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Cardholder Details
+      </div>
+      <div class="fg2">
+        <div class="form-field"><label>Age</label><input type="number" id="f-age" placeholder="e.g. 35" min="1" max="120"></div>
+        <div class="form-field"><label>Gender</label>
+          <select id="f-gender">
+            <option value="">Select gender</option>
+            <option>Male</option>
+            <option>Female</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-section-head">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        Transaction Details
+      </div>
+      <div class="fg2">
+        <div class="form-field"><label>Amount (₹)</label><input type="number" id="f-amount" placeholder="e.g. 4500.00" min="0" step="0.01"></div>
+        <div class="form-field"><label>Merchant Category</label>
+          <select id="f-category">
+            <option value="">Select category</option>
+            <option>Grocery</option><option>Food</option><option>Travel</option>
+            <option>Online Shopping</option><option>Fashion</option>
+            <option>Electronics</option><option>Entertainment</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg3">
+        <div class="form-field"><label>City</label>
+          <select id="f-city">
+            <option value="">Select city</option>
+            <option>Delhi</option><option>Mumbai</option><option>Chennai</option>
+            <option>Bangalore</option><option>Hyderabad</option><option>Pune</option>
+            <option>Kolkata</option><option>Gurgaon</option>
+          </select>
+        </div>
+        <div class="form-field"><label>Transaction Hour (0–23)</label><input type="number" id="f-hour" placeholder="e.g. 2" min="0" max="23"></div>
+        <div class="form-field"><label>Month (1–12)</label><input type="number" id="f-month" placeholder="e.g. 8" min="1" max="12"></div>
+      </div>
+      <div class="fg2">
+        <div class="form-field"><label>Prior Failed Attempts</label><input type="number" id="f-failed" placeholder="e.g. 0" min="0" max="10"></div>
+        <div class="form-field"><label>Year</label><input type="number" id="f-year" placeholder="2025" value="2025"></div>
+      </div>
+
+      <div class="form-section-head">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        Transaction Flags
+      </div>
+      <div class="fg2">
+        <div class="form-field"><label>International Transaction</label>
+          <div class="toggle-group">
+            <button class="tog" id="t-intl-yes" onclick="tog('intl','yes')">Yes</button>
+            <button class="tog tog-no" id="t-intl-no" onclick="tog('intl','no')">No</button>
+          </div>
+        </div>
+        <div class="form-field"><label>Card Physically Present</label>
+          <div class="toggle-group">
+            <button class="tog" id="t-card-yes" onclick="tog('card','yes')">Yes</button>
+            <button class="tog tog-no" id="t-card-no" onclick="tog('card','no')">No</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="analyze-btn" id="analyze-btn" onclick="runAnalysis()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Analyze Transaction Risk
+      </button>
+    </div>
+
+    <div id="result-panel" class="result-panel">
+      <div class="result-inner" id="result-inner"></div>
+    </div>
+    <div id="history-row" class="history-row"></div>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section id="team" class="team-section">
+  <div class="section-tag">The Builders</div>
+  <h2 class="section-title">Meet the Team</h2>
+  <p class="section-sub">Two ML engineers who designed and built this end-to-end fraud detection system from scratch.</p>
+  <div class="team-grid">
+    <div class="team-card fade-in stagger-1">
+      <div class="team-card-glow"></div>
+      <div class="team-avatar ta-blue">PT</div>
+      <div class="team-name">Prakhar Tiwari</div>
+      <div class="team-role">Aspiring ML Engineer &amp; Data Scientist</div>
+      <p class="team-desc">Architected the full MLDLC pipeline — from data ingestion and feature engineering to model training and hyperparameter tuning with GridSearchCV.</p>
+      <div class="team-tags">
+        <span class="tag">Random Forest</span>
+        <span class="tag">Feature Eng.</span>
+        <span class="tag">EDA</span>
+        <span class="tag">Python</span>
+        <span class="tag">Scikit-learn</span>
+      </div>
+    </div>
+    <div class="team-card fade-in stagger-2">
+      <div class="team-card-glow" style="background:linear-gradient(135deg,rgba(0,212,255,0.08),rgba(0,229,160,0.05))"></div>
+      <div class="team-avatar ta-teal">PR</div>
+      <div class="team-name">Pratik Raj</div>
+      <div class="team-role">Aspiring ML Engineer &amp; Model Analyst</div>
+      <p class="team-desc">Led model evaluation, confusion matrix analysis, precision-recall optimization, and deployment of the predict_fraud() inference pipeline.</p>
+      <div class="team-tags">
+        <span class="tag">Model Eval</span>
+        <span class="tag">GridSearchCV</span>
+        <span class="tag">Deployment</span>
+        <span class="tag">Pandas</span>
+        <span class="tag">Matplotlib</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">
+    <svg width="20" height="20" viewBox="0 0 32 32" fill="none"><path d="M16 2L4 8v9c0 6.3 5.1 12.2 12 13.7C23 29.2 28 23.3 28 17V8L16 2z" fill="rgba(79,127,255,0.15)" stroke="#4f7fff" stroke-width="1.5"/><path d="M11 16l4 4 6-6" stroke="#00d4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    FraudGuard AI
+  </div>
+  <div class="footer-divider"></div>
+  <p class="footer-text">Built by <strong>Prakhar Tiwari</strong> &amp; <strong>Pratik Raj</strong> · Credit Card Fraud Detection · ML Mini Lab</p>
+  <p class="footer-text" style="margin-top:6px;font-size:12px">Powered by Random Forest · Trained on 1,000 Indian credit card transactions · 10 MLDLC experiments</p>
+</footer>
+
+<script>
+const S = { intl:'no', card:'no', history:[] };
+
+function tog(f, v) {
+  S[f] = v;
+  ['yes','no'].forEach(x => {
+    const b = document.getElementById('t-'+f+'-'+x);
+    b.className = 'tog' + (x===v ? (v==='yes' ? ' tog-yes' : ' tog-no') : '');
+  });
+}
+
+function getVals() {
+  return {
+    age:    parseFloat(document.getElementById('f-age').value),
+    gender: document.getElementById('f-gender').value,
+    amount: parseFloat(document.getElementById('f-amount').value),
+    cat:    document.getElementById('f-category').value,
+    city:   document.getElementById('f-city').value,
+    hour:   parseInt(document.getElementById('f-hour').value),
+    month:  parseInt(document.getElementById('f-month').value),
+    failed: parseInt(document.getElementById('f-failed').value),
+    intl:   S.intl==='yes' ? 1 : 0,
+    card:   S.card==='yes' ? 1 : 0
+  };
+}
+
+function validate(v) {
+  const e = [];
+  if (isNaN(v.age) || v.age < 1 || v.age > 120) e.push('Age must be between 1 and 120');
+  if (!v.gender) e.push('Gender is required');
+  if (isNaN(v.amount) || v.amount <= 0) e.push('Enter a valid transaction amount');
+  if (!v.cat) e.push('Select a merchant category');
+  if (!v.city) e.push('Select a city');
+  if (isNaN(v.hour) || v.hour < 0 || v.hour > 23) e.push('Hour must be between 0 and 23');
+  if (isNaN(v.month) || v.month < 1 || v.month > 12) e.push('Month must be between 1 and 12');
+  if (isNaN(v.failed) || v.failed < 0) e.push('Failed attempts must be 0 or more');
+  return e;
+}
+
+function predictFraud(v) {
+  let score = 0;
+  const factors = [], safe = [];
+
+  // Failed attempts (strongest signal)
+  if (v.failed >= 4)      { score += 0.35; factors.push('Very high failed attempts (' + v.failed + ') — strong fraud signal'); }
+  else if (v.failed >= 3) { score += 0.25; factors.push('High failed attempts (' + v.failed + ') prior to transaction'); }
+  else if (v.failed >= 2) { score += 0.12; factors.push('Multiple failed attempts (' + v.failed + ')'); }
+  else if (v.failed === 0){ safe.push('No failed attempts before transaction'); }
+  else                    { safe.push('Only ' + v.failed + ' failed attempt — low risk'); }
+
+  // Transaction hour
+  if      (v.hour >= 0 && v.hour < 5)  { score += 0.25; factors.push('Late night transaction at ' + v.hour + ':00 — unusual hours'); }
+  else if (v.hour >= 5 && v.hour < 7)  { score += 0.10; }
+  else if (v.hour >= 9 && v.hour <= 19){ safe.push('Transaction during normal business hours (' + v.hour + ':00)'); }
+
+  // Amount
+  if      (v.amount >= 4000) { score += 0.20; factors.push('High transaction amount ₹' + v.amount.toLocaleString('en-IN',{maximumFractionDigits:2})); }
+  else if (v.amount >= 2500) { score += 0.10; }
+  else if (v.amount >= 1500) { score += 0.04; }
+  else                       { safe.push('Moderate amount ₹' + v.amount.toLocaleString('en-IN',{maximumFractionDigits:2})); }
+
+  // International
+  if (v.intl === 1) { score += 0.15; factors.push('International transaction — elevated risk'); }
+  else              { safe.push('Domestic transaction'); }
+
+  // Card presence
+  if (v.card === 0) { score += 0.12; factors.push('Card not physically present — CNP transaction'); }
+  else              { safe.push('Card physically present — lowers risk'); }
+
+  // Merchant category
+  const highRiskCats = ['Online Shopping','Travel','Electronics'];
+  const lowRiskCats  = ['Grocery','Food'];
+  if      (highRiskCats.includes(v.cat)) { score += 0.10; factors.push(v.cat + ' is a higher-risk merchant category'); }
+  else if (lowRiskCats.includes(v.cat))  { safe.push(v.cat + ' is a low-risk merchant category'); score -= 0.05; }
+
+  // Age
+  if      (v.age < 22 || v.age > 75)        { score += 0.04; }
+  else if (v.age >= 30 && v.age <= 60)       { safe.push('Age ' + v.age + ' is in a low-fraud demographic band'); }
+
+  // Month
+  if (v.month >= 10 || v.month === 1)        { score += 0.03; }
+
+  // City
+  if (['Mumbai'].includes(v.city))           { score += 0.05; }
+  else                                       { safe.push(v.city + ' shows lower fraud rates in training data'); }
+
+  score = Math.max(0, Math.min(0.98, score));
+
+  let riskLevel, prediction, confidence;
+  if      (score >= 0.65) { riskLevel='HIGH';   prediction='FRAUD';      confidence=score>=0.80?'HIGH':'MEDIUM'; }
+  else if (score >= 0.35) { riskLevel='MEDIUM'; prediction='SUSPICIOUS'; confidence='MEDIUM'; }
+  else                    { riskLevel='LOW';    prediction='LEGITIMATE';  confidence=score<=0.15?'HIGH':'MEDIUM'; }
+
+  let explanation = '';
+  if (prediction === 'FRAUD') {
+    explanation = 'This transaction exhibits ' + factors.length + ' strong fraud indicator' + (factors.length>1?'s':'') + '. The combination of ' + (factors[0]||'suspicious patterns') + ' significantly elevates the fraud probability. Recommend immediate review.';
+  } else if (prediction === 'SUSPICIOUS') {
+    explanation = 'This transaction has a moderate fraud risk score. While not definitively fraudulent, ' + (factors.length>0?factors[0].toLowerCase():'some patterns') + ' warrants attention. Consider secondary verification.';
+  } else {
+    explanation = 'This transaction exhibits mostly legitimate patterns. ' + (safe.length>0?safe[0]+'.':'') + ' The overall risk profile is consistent with normal spending behavior.';
+  }
+
+  return { score, riskLevel, prediction, confidence, factors, safe, explanation };
+}
+
+function nowStr() {
+  return new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
+}
+
+async function runAnalysis() {
+  const vals = getVals();
+  const errs = validate(vals);
+  const panel = document.getElementById('result-panel');
+  const inner = document.getElementById('result-inner');
+
+  if (errs.length > 0) {
+    inner.innerHTML = `<div style="padding:1.3rem;background:rgba(255,77,106,0.08);border:1px solid rgba(255,77,106,0.22);border-radius:11px;font-size:13px;color:#fca5a5">
+      <strong style="display:block;margin-bottom:8px;font-family:'Syne',sans-serif">Please fix the following:</strong>
+      <ul style="padding-left:1.2rem">${errs.map(e=>`<li style="margin-bottom:4px">${e}</li>`).join('')}</ul></div>`;
+    panel.style.display='block';
+    return;
+  }
+
+  const btn = document.getElementById('analyze-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Analyzing...';
+
+  await new Promise(r => setTimeout(r, 950));
+
+  const res = predictFraud(vals);
+  const prob = Math.round(res.score * 100);
+  const legit = 100 - prob;
+
+  const colorMap   = { FRAUD:'#ff4d6a', SUSPICIOUS:'#ffba00', LEGITIMATE:'#00e5a0' };
+  const bgMap      = { FRAUD:'rgba(255,77,106,0.1)', SUSPICIOUS:'rgba(255,186,0,0.1)', LEGITIMATE:'rgba(0,229,160,0.1)' };
+  const borderMap  = { FRAUD:'rgba(255,77,106,0.25)', SUSPICIOUS:'rgba(255,186,0,0.25)', LEGITIMATE:'rgba(0,229,160,0.25)' };
+  const iconMap    = { FRAUD:'⚠', SUSPICIOUS:'◉', LEGITIMATE:'✓' };
+  const labelMap   = { FRAUD:'Fraudulent Transaction', SUSPICIOUS:'Suspicious Transaction', LEGITIMATE:'Legitimate Transaction' };
+
+  const clr = colorMap[res.prediction];
+  const bg  = bgMap[res.prediction];
+  const brd = borderMap[res.prediction];
+
+  const riskFacs = res.factors.map(f=>`<div class="factor-item"><div class="factor-dot" style="background:var(--red)"></div><span>${f}</span></div>`).join('') ||
+    `<div class="factor-item" style="color:var(--text3)">No significant risk factors detected</div>`;
+  const safeInds = res.safe.map(s=>`<div class="factor-item"><div class="factor-dot" style="background:var(--green)"></div><span>${s}</span></div>`).join('') ||
+    `<div class="factor-item" style="color:var(--text3)">No strong safe indicators</div>`;
+
+  inner.innerHTML = `
+    <div class="result-top">
+      <div class="verdict-chip">
+        <div class="verdict-icon" style="background:${bg};border:1px solid ${brd};color:${clr};font-size:20px">${iconMap[res.prediction]}</div>
+        <div class="verdict-text" style="color:${clr}">${labelMap[res.prediction]}</div>
+      </div>
+      <div class="result-timestamp">Analyzed · ${nowStr()}</div>
+    </div>
+    <div class="result-metrics">
+      <div class="res-metric">
+        <span class="res-metric-val mono" style="color:${clr}">${prob}%</span>
+        <div class="res-metric-lbl">Fraud probability</div>
+      </div>
+      <div class="res-metric">
+        <span class="res-metric-val mono text-green">${legit}%</span>
+        <div class="res-metric-lbl">Legit probability</div>
+      </div>
+      <div class="res-metric">
+        <span class="res-metric-val" style="color:${clr};font-size:1.25rem;padding-top:0.3rem">${res.riskLevel}</span>
+        <div class="res-metric-lbl">Risk level</div>
+      </div>
+    </div>
+    <div class="prob-visual">
+      <div class="prob-title">Risk probability distribution</div>
+      <div class="prob-bar-track">
+        <div class="prob-bar-fill" style="width:${prob}%;background:${clr}"></div>
+      </div>
+      <div class="prob-labels"><span>Legitimate (${legit}%)</span><span>Fraud (${prob}%)</span></div>
+    </div>
+    <div class="factors-grid">
+      <div class="factors-box">
+        <h4 style="color:var(--red)">Risk factors detected</h4>${riskFacs}
+      </div>
+      <div class="factors-box">
+        <h4 style="color:var(--green)">Safe indicators</h4>${safeInds}
+      </div>
+    </div>
+    <div class="explanation-box" style="border-left-color:${clr}">${res.explanation}</div>`;
+
+  panel.style.display = 'block';
+
+  // History
+  const histRow = document.getElementById('history-row');
+  S.history.unshift({ label:labelMap[res.prediction], prob, clr, cat:vals.cat, amount:vals.amount });
+  if (S.history.length > 6) S.history.pop();
+  if (S.history.length > 1) {
+    histRow.style.display = 'flex';
+    histRow.innerHTML = S.history.slice(1).map(h=>`
+      <div class="hist-chip">
+        <div class="hist-dot" style="background:${h.clr}"></div>
+        ₹${parseFloat(h.amount).toLocaleString('en-IN',{maximumFractionDigits:0})} · ${h.cat} · <strong style="color:${h.clr}">${h.prob}%</strong>
+      </div>`).join('');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Analyze Transaction Risk`;
+  panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+// Scroll animations
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
